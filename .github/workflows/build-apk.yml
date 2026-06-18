@@ -79,7 +79,6 @@ jobs:
                 mavenCentral()
             }
             
-            // ✅ Force کردن نسخه‌های androidx برای سازگاری با AGP 8.7.0
             configurations.all {
                 resolutionStrategy {
                     force 'androidx.core:core:1.13.1'
@@ -175,7 +174,7 @@ jobs:
     - name: Install dependencies
       run: flutter pub get
 
-    - name: Build APK (NOT bundle)
+    - name: Build APK
       run: |
         echo "🏗️ Building APK (release mode)..."
         flutter build apk --release --no-tree-shake-icons
@@ -183,7 +182,7 @@ jobs:
         ls -la build/app/outputs/flutter-apk/
 
     - name: Upload APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: insect-detector-apk
         path: build/app/outputs/flutter-apk/app-release.apk
