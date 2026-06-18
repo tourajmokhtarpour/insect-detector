@@ -34,7 +34,6 @@ class _InsectDetectorScreenState extends State<InsectDetectorScreen> {
   String _resultText = "لطفاً یک تصویر انتخاب کنید.";
   bool _isProcessing = false;
 
-  // ⚠️ این عدد باید دقیقاً برابر با سایزی باشد که مدل با آن آموزش دیده
   final int _inputSize = 224;
   final int _numClasses = 39;
 
@@ -56,7 +55,6 @@ class _InsectDetectorScreenState extends State<InsectDetectorScreen> {
           .toList();
       setState(() {});
     } catch (e) {
-      print("خطا در بارگذاری مدل: $e");
       setState(() {
         _resultText = "خطا در بارگذاری مدل: $e";
       });
@@ -65,10 +63,7 @@ class _InsectDetectorScreenState extends State<InsectDetectorScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
-      source: source,
-      imageQuality: 85,
-    );
+    final pickedFile = await picker.pickImage(source: source, imageQuality: 85);
     if (pickedFile != null) {
       setState(() {
         _imageFile = File(pickedFile.path);
@@ -100,13 +95,11 @@ class _InsectDetectorScreenState extends State<InsectDetectorScreen> {
 
       img.Image resizedImage = img.copyResize(image, width: _inputSize, height: _inputSize);
 
-      // ✅ استفاده از API جدید پکیج image نسخه 4.x
       var input = List.filled(1 * _inputSize * _inputSize * 3, 0.0)
           .reshape([1, _inputSize, _inputSize, 3]);
       for (int y = 0; y < _inputSize; y++) {
         for (int x = 0; x < _inputSize; x++) {
           var pixel = resizedImage.getPixel(x, y);
-          // ✅ در نسخه جدید، از pixel.r, pixel.g, pixel.b استفاده می‌کنیم
           input[0][y][x][0] = pixel.r / 255.0;
           input[0][y][x][1] = pixel.g / 255.0;
           input[0][y][x][2] = pixel.b / 255.0;
