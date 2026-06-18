@@ -22,5 +22,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/best_float32.tflite
+    - assets/QU_Pests_39Epochs_YOLO26n_float32.tflite
     - assets/labels.txt
