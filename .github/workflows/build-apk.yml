@@ -142,12 +142,12 @@ jobs:
         android {
             namespace "com.example.insect_detector"
             compileSdk 34
-            ndkVersion flutter.ndkVersion
+            ndkVersion "27.0.12077973"
             compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
             kotlinOptions { jvmTarget = '17' }
             defaultConfig {
                 applicationId "com.example.insect_detector"
-                minSdk 21
+                minSdk 26
                 targetSdk 34
                 versionCode flutterVersionCode.toInteger()
                 versionName flutterVersionName
@@ -162,7 +162,7 @@ jobs:
         }
         flutter { source '../..' }
         EOF
-        echo "✅ Gradle configured with androidx force"
+        echo "✅ Gradle configured (minSdk 26 + NDK 27.0.12077973)"
 
     - name: Copy AndroidManifest
       run: |
