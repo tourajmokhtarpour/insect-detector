@@ -1,0 +1,36 @@
+workflows:
+  insect-detector-workflow:
+    name: Insect Detector APK Build
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      vars:
+        FLUTTER_VERSION: "3.24.0"
+    scripts:
+      - name: Create Android platform files automatically
+        script: |
+          echo "🔧 Creating Android platform files with correct versions..."
+          flutter create --platforms=android .
+          
+      - name: Copy custom AndroidManifest.xml
+        script: |
+          echo "📋 Copying custom AndroidManifest.xml with permissions..."
+          cp custom_android/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+          
+      - name: Get Flutter packages
+        script: |
+          echo "📦 Getting Flutter packages..."
+          flutter pub get
+          
+      - name: Build APK
+        script: |
+          echo "🏗️ Building APK..."
+          flutter build apk --release
+          
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
+      
+    publishing:
+      email:
+        recipients:
+          - mokhtarpor.touraj@gmail.com
