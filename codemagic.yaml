@@ -9,11 +9,55 @@ workflows:
         script: |
           flutter create --platforms=android .
           
-      - name: Fix JVM compatibility and Gradle files
+      - name: Fix Gradle configuration
         script: |
-          echo "Fixing JVM compatibility..."
+          echo "🔧 Fixing Gradle with compatible versions..."
           
-          # ویرایش android/build.gradle
+          # حذف فایل‌های .kts
+          rm -f android/build.gradle.kts
+          rm -f android/app/build.gradle.kts
+          rm -f android/settings.gradle.kts
+          
+          # Gradle 8.11.1
+          mkdir -p android/gradle/wrapper
+          cat > android/gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.11.1-all.zip
+          EOF
+          
+          # settings.gradle با AGP 8.9.1 و Kotlin 2.0.21
+          cat > android/settings.gradle << 'EOF'
+          pluginManagement {
+              def flutterSdkPath = {
+                  def properties = new Properties()
+                  file("local.properties").withInputStream { properties.load(it) }
+                  def flutterSdkPath = properties.getProperty("flutter.sdk")
+                  assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
+                  return flutterSdkPath
+              }()
+
+              includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          plugins {
+              id "dev.flutter.flutter-plugin-loader" version "1.0.0"
+              id "com.android.application" version "8.9.1" apply false
+              id "org.jetbrains.kotlin.android" version "2.0.21" apply false
+          }
+
+          include ":app"
+          EOF
+          
+          # build.gradle ریشه
           cat > android/build.gradle << 'EOF'
           allprojects {
               repositories {
@@ -26,8 +70,23 @@ workflows:
           subprojects {
               project.buildDir = "${rootProject.buildDir}/${project.name}"
           }
+
           subprojects {
-              project.evaluationDependsOn(':app')
+              afterEvaluate { project ->
+                  if (project.hasProperty('android')) {
+                      project.android {
+                          compileOptions {
+                              sourceCompatibility JavaVersion.VERSION_17
+                              targetCompatibility JavaVersion.VERSION_17
+                          }
+                      }
+                  }
+                  project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+                      kotlinOptions {
+                          jvmTarget = "17"
+                      }
+                  }
+              }
           }
 
           tasks.register("clean", Delete) {
@@ -35,7 +94,7 @@ workflows:
           }
           EOF
           
-          # ویرایش android/app/build.gradle با JVM target 17
+          # app/build.gradle - با minifyEnabled false برای جلوگیری از خطای R8
           cat > android/app/build.gradle << 'EOF'
           plugins {
               id "com.android.application"
@@ -56,7 +115,7 @@ workflows:
 
           android {
               namespace "com.example.insect_detector"
-              compileSdk 34
+              compileSdk 36
               ndkVersion flutter.ndkVersion
 
               compileOptions {
@@ -71,7 +130,7 @@ workflows:
               defaultConfig {
                   applicationId "com.example.insect_detector"
                   minSdk 21
-                  targetSdk 34
+                  targetSdk 36
                   versionCode flutterVersionCode.toInteger()
                   versionName flutterVersionName
               }
@@ -79,6 +138,9 @@ workflows:
               buildTypes {
                   release {
                       signingConfig signingConfigs.debug
+                      // ✅ غیرفعال کردن R8/minification برای جلوگیری از خطای TFLite GPU
+                      minifyEnabled false
+                      shrinkResources false
                   }
               }
           }
@@ -88,7 +150,7 @@ workflows:
           }
           EOF
           
-          echo "✅ Gradle files fixed with JVM 17"
+          echo "✅ Gradle fixed (AGP 8.9.1 + R8 disabled)"
           
       - name: Copy AndroidManifest
         script: |
@@ -100,7 +162,7 @@ workflows:
           
       - name: Build Release APK
         script: |
-          flutter build apk --release
+          flutter build apk --release --android-skip-build-dependency-validation
           
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
@@ -108,4 +170,4 @@ workflows:
     publishing:
       email:
         recipients:
-          - mokhtarportouraj@gmail.com
+          - mokhtarpourtouraj@gmail.com
