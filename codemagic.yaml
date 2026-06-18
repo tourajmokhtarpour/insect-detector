@@ -1,30 +1,105 @@
 workflows:
-  insect-detector-workflow:
-    name: Insect Detector APK Build
+  android-apk-only:
+    name: Android APK Build
     max_build_duration: 60
     environment:
       flutter: stable
-      vars:
-        FLUTTER_VERSION: "3.24.0"
     scripts:
-      - name: Create Android platform files automatically
+      - name: Create Android platform
         script: |
-          echo "🔧 Creating Android platform files with correct versions..."
           flutter create --platforms=android .
           
-      - name: Copy custom AndroidManifest.xml
+      - name: Fix JVM compatibility and Gradle files
         script: |
-          echo "📋 Copying custom AndroidManifest.xml with permissions..."
+          echo "Fixing JVM compatibility..."
+          
+          # ویرایش android/build.gradle
+          cat > android/build.gradle << 'EOF'
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          rootProject.buildDir = '../build'
+          subprojects {
+              project.buildDir = "${rootProject.buildDir}/${project.name}"
+          }
+          subprojects {
+              project.evaluationDependsOn(':app')
+          }
+
+          tasks.register("clean", Delete) {
+              delete rootProject.buildDir
+          }
+          EOF
+          
+          # ویرایش android/app/build.gradle با JVM target 17
+          cat > android/app/build.gradle << 'EOF'
+          plugins {
+              id "com.android.application"
+              id "kotlin-android"
+              id "dev.flutter.flutter-gradle-plugin"
+          }
+
+          def localProperties = new Properties()
+          def localPropertiesFile = rootProject.file('local.properties')
+          if (localPropertiesFile.exists()) {
+              localPropertiesFile.withReader('UTF-8') { reader ->
+                  localProperties.load(reader)
+              }
+          }
+
+          def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '1'
+          def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0'
+
+          android {
+              namespace "com.example.insect_detector"
+              compileSdk 34
+              ndkVersion flutter.ndkVersion
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+
+              kotlinOptions {
+                  jvmTarget = '17'
+              }
+
+              defaultConfig {
+                  applicationId "com.example.insect_detector"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode flutterVersionCode.toInteger()
+                  versionName flutterVersionName
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.debug
+                  }
+              }
+          }
+
+          flutter {
+              source '../..'
+          }
+          EOF
+          
+          echo "✅ Gradle files fixed with JVM 17"
+          
+      - name: Copy AndroidManifest
+        script: |
           cp custom_android/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
           
       - name: Get Flutter packages
         script: |
-          echo "📦 Getting Flutter packages..."
           flutter pub get
           
-      - name: Build APK
+      - name: Build Release APK
         script: |
-          echo "🏗️ Building APK..."
           flutter build apk --release
           
     artifacts:
@@ -33,4 +108,4 @@ workflows:
     publishing:
       email:
         recipients:
-          - mokhtarpor.touraj@gmail.com
+          - mokhtarportouraj@gmail.com
