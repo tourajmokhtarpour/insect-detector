@@ -1,10 +1,10 @@
-name: Setup Android Platform
+name: Build Android APK Only
 
 on:
   workflow_dispatch:
 
 jobs:
-  setup:
+  build:
     runs-on: ubuntu-latest
     
     steps:
@@ -13,20 +13,35 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.24.0'
         channel: 'stable'
+        cache: true
 
-    - name: Create Android platform
+    - name: Create Android platform ONLY
       run: |
-        echo "🔨 Creating Android platform..."
-        flutter create --platforms=android .
+        echo "🔨 Creating Android platform (no iOS)..."
+        rm -rf android ios temp_project
+        flutter create --platforms=android --org com.example --project-name insect_detector temp_project
+        mv temp_project/android ./
+        rm -rf temp_project
+        
+        if [ ! -d "android" ]; then
+          echo "❌ Failed to create Android platform"
+          exit 1
+        fi
         echo "✅ Android platform created"
         ls -la android/
 
-    - name: Configure Gradle
+    - name: Configure Gradle for Flutter 3.44
       run: |
         echo "🔧 Configuring Gradle..."
         
@@ -136,16 +151,27 @@ jobs:
           echo "⚠️ WARNING: custom_android/AndroidManifest.xml not found"
         fi
 
-    - name: Install dependencies
+    - name: Install Flutter dependencies
       run: flutter pub get
 
-    - name: Build APK
-      run: flutter build apk --release --android-skip-build-dependency-validation
+    - name: Build Android APK (Release)
+      run: |
+        echo "🏗️ Building APK..."
+        flutter build apk --release --target-platform android-arm64
+        echo "✅ APK built successfully"
+        ls -la build/app/outputs/flutter-apk/
 
-    - name: Commit and push android folder
+    - name: Upload APK as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: insect-detector-apk
+        path: build/app/outputs/flutter-apk/app-release.apk
+        retention-days: 30
+
+    - name: Commit android folder to repo
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add android/
         git commit -m "Add Android platform folder" || echo "No changes to commit"
-        git push || echo "No changes to push"
+        git push || echo "No changes
