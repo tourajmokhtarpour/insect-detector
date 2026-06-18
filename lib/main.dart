@@ -45,7 +45,7 @@ class _InsectDetectorScreenState extends State<InsectDetectorScreen> {
 
   Future<void> _loadModel() async {
     try {
-      _interpreter = await Interpreter.fromAsset('assets/best_float32.tflite');
+      _interpreter = await Interpreter.fromAsset('assets/QU_Pests_39Epochs_YOLO26n_float32.tflite');
       String labelsData = await DefaultAssetBundle.of(context)
           .loadString('assets/labels.txt');
       _labels = labelsData
