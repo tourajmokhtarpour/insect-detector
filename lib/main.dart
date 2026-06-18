@@ -35,7 +35,7 @@ class _InsectDetectorScreenState extends State<InsectDetectorScreen> {
   bool _isProcessing = false;
 
   final int _inputSize = 224;
-  final int _numClasses = 39;
+  final int _numClasses = 40;
 
   @override
   void initState() {
